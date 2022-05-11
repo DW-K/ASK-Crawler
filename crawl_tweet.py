@@ -1,5 +1,4 @@
 import re
-import sys
 import time
 from datetime import datetime, timedelta
 from selenium import webdriver
@@ -25,7 +24,6 @@ class tweet_crawler:
                         "인기", "최신", "사용자", "사진", "동영상", "새 트윗 보기", "이 스레드 보기", "모두 보기", "팔로우", "공식 트위터"]
         self.user_at = "@"
 
-        self.input_date_format = "%Y%m%d"
         self.date_format = "%Y-%m-%d"
 
     def url_setting(self, query, start_date):
@@ -36,63 +34,65 @@ class tweet_crawler:
         url = 'https://twitter.com/search?q=' + query + since + until + lang
         return url
 
-    def tweet_crawler(self, company: str, query: str, start_date: datetime, end_date: datetime = None):
+    def tweet_crawler(self, query_list: list, start_date: datetime, end_date: datetime = None):
         df = pd.DataFrame(columns=["text", "rt_count", "company", "date"])
         min_text_length = 16  # 크롤링 된 element중 저장할 text의 최소 길이
         # raw_tweet = []
         # curr_date = start_date
 
+        if type(query_list) is not list:
+            query_list = [query_list]
+
         if end_date is None:
             end_date = start_date
 
         while (end_date - start_date).days > 0:
+            for query in query_list:
+                url = self.url_setting(query, start_date)
 
-            url = self.url_setting(query, start_date)
+                self.driver.get(url)
+                html = self.driver.page_source
+                soup = BeautifulSoup(html, 'html.parser')
 
-            self.driver.get(url)
-            html = self.driver.page_source
-            soup = BeautifulSoup(html, 'html.parser')
+                lastHeight = self.driver.execute_script("return document.body.scrollHeight")
 
-            lastHeight = self.driver.execute_script("return document.body.scrollHeight")
+                while True:
+                    print('-------------------------------------------------------date:', start_date)
 
-            while True:
-                print('-------------------------------------------------------date:', start_date)
+                    # 여기서 크로링 한번 진행
+                    self.crawler(soup, query)
 
-                # 여기서 크로링 한번 진행
-                self.crawler(soup, query)
+                    # 스크롤 다운
+                    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                    time.sleep(2)
+                    newHeight = self.driver.execute_script("return document.body.scrollHeight")
 
-                # 스크롤 다운
-                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(2)
-                newHeight = self.driver.execute_script("return document.body.scrollHeight")
+                    if newHeight != lastHeight:
+                        html = self.driver.page_source
+                        soup = BeautifulSoup(html, 'html.parser')
 
-                if newHeight != lastHeight:
-                    html = self.driver.page_source
-                    soup = BeautifulSoup(html, 'html.parser')
+                        # 크롤링 결과 리스트로 저장
+                        raw_tweet = self.crawler(soup, query)
 
-                    # 크롤링 결과 리스트로 저장
-                    raw_tweet = self.crawler(soup, query)
+                        # 결과 전처리
+                        cleaned_tweet = self.clear_contents(raw_tweet, min_text_length)
 
-                    # 결과 전처리
-                    cleaned_tweet = self.clear_contents(raw_tweet, min_text_length)
+                        # 전처리 완료 된 list들을 df에 추가
+                        text_series = pd.Series(cleaned_tweet, dtype=pd.StringDtype())
+                        df_to_insert = pd.DataFrame(text_series, columns=['text'])
+                        df_to_insert['rt_count'] = 0
+                        df_to_insert['date'] = start_date
 
-                    # 전처리 완료 된 list들을 df에 추가
-                    text_series = pd.Series(cleaned_tweet, dtype=pd.StringDtype())
-                    df_to_insert = pd.DataFrame(text_series, columns=['text'])
-                    df_to_insert['company'] = company
-                    df_to_insert['rt_count'] = 0
-                    df_to_insert['date'] = start_date
+                        df = pd.concat([df, df_to_insert], ignore_index=True)
+                        print(df_to_insert)
 
-                    df = pd.concat([df, df_to_insert], ignore_index=True)
-                    print(df_to_insert)
+                    else:
+                        break
 
-                else:
-                    break
+                    lastHeight = newHeight
 
-                lastHeight = newHeight
-
-            # end of the while
-            start_date = start_date + timedelta(days=1)
+                # end of the while
+                start_date = start_date + timedelta(days=1)
 
         return df
 
@@ -218,17 +218,16 @@ class tweet_crawler:
 
 
 if __name__ == "__main__":
-    # arg_list = sys.argv[1:]  # argument 받아서 실행
-    arg_list = ['현대', '자동차', '20211101', '20211130']
+    arg_list = ['20211101', '20211104']
 
-    company = arg_list[0]
-    query = arg_list[1]
-    start_date_str = arg_list[2]
-    end_date_str = arg_list[3]
+    start_date_str = arg_list[0]
+    end_date_str = arg_list[1]
+
+    query_list = ["아반떼", "쏘나타"]
 
     cl = tweet_crawler()
+    date_format = '%Y%m%d'
+    start_date = datetime.strptime(start_date_str, date_format)
+    end_date = datetime.strptime(end_date_str, date_format)
 
-    start_date = datetime.strptime(start_date_str, cl.input_date_format)
-    end_date = datetime.strptime(end_date_str, cl.input_date_format)
-
-    result = cl.tweet_crawler(company, query, start_date, end_date)  # dataframe
+    result = cl.tweet_crawler(query_list, start_date, end_date)  # dataframe
