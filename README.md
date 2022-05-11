@@ -70,3 +70,10 @@ result = cl.tweet_crawler(query_list, start_date, end_date)  # dataframe
 ~~~
 ## 결과 화면
 ![image](https://user-images.githubusercontent.com/28096454/167748384-055392a8-a06f-4d56-b519-4073bfde2818.png)
+
+## Github profile of Team members :
+강두원 : https://github.com/DW-K   
+김소정 : https://github.com/Sojeong-Kim0915   
+박태현 : https://github.com/Taehyuny   
+노민하 : https://github.com/MinaRoh      
+ASK프로젝트의 모든 기능은 [다음과 같은 주소](https://github.com/DW-K/A.S.K.-AnalysisStock-)에서 확인하실 수 있습니다.
