@@ -41,7 +41,7 @@ print(df)
 ## 필요 라이브러리
 1. selenium
 2. bs4
-3. pandas
+3. pandas   
 레포지토리에 포함된 chromedriver.exe가 설치된 크롬브라우저 환경과 맞지 않을 경우 [이곳](https://chromedriver.chromium.org/downloads)에서 다운로드 받아주시기 바랍니다.   
 
 ## input
